@@ -1,5 +1,6 @@
 package perso;
 
+
 import javax.swing.*;
 import java.awt.*;
 import java.awt.event.*;
@@ -12,51 +13,53 @@ import java.io.*;
 public class Communica extends JFrame implements ActionListener {
 
     /* Attributes */
-    private BufferedWriter writer;
-    private BufferedReader reader;
-    private JButton bReceive;
+    //private JButton bReceive;
     private JButton bSend;
-    private JLabel Imessrec;
-    private JLabel Imesssend;
-    private JLabel Ipseudo;
+    //private JLabel Imessrec;
+    //private JLabel Imesssend;
+    //private JLabel Ipseudo;
     private JTextArea textRec;
     private JTextField textToSend;
     private JTextField pseudo;
-    private JScrollPane scrollTextRec;
+    //private JScrollPane scrollTextRec;
+    //private CommunicaTCPListener communicaTCPListener;
+    private CommunicaTCPSender communicaTCPSender;
 
 
     /*Constructeurs*/
-    public Communica(BufferedReader reader, BufferedWriter writer) {
+    public Communica(BufferedReader reader, BufferedWriter writer) throws IOException {
         this.initComponents(reader, writer);
     }
 
 
     /*methodes*/
-    private void  initComponents(BufferedReader reader, BufferedWriter writer) {
+    private void  initComponents(BufferedReader reader, BufferedWriter writer) throws IOException {
 
         //initialisation des attributs
-        this.reader = reader;
-        this.writer = writer;
-        this.bReceive = new JButton("receive");
-        this.bSend = new JButton("send");
-        this.Imessrec = new JLabel("received message");
-        this.Imesssend = new JLabel("message to send");
-        this.Ipseudo = new JLabel("Votre pseudo :");
-        this.textRec = new JTextArea("", 4,4);
+        CommunicaTCPListener communicaTCPListener = new CommunicaTCPListener(this, reader);
+        this.communicaTCPSender = new CommunicaTCPSender(writer);
+        this.bSend = new JButton("Send");
+       // JLabel Imessrec = new JLabel("received message");
+        JLabel Imesssend = new JLabel("message to send");
+        JLabel Ipseudo = new JLabel("Votre pseudo :");
+        this.textRec = new JTextArea("");
         this.textToSend = new JTextField("Ecrivez votre texte ici");
         this.pseudo = new JTextField("");
-        this.scrollTextRec = new JScrollPane(textRec);
+        JScrollPane scrollTextRec = new JScrollPane(textRec);
 
         //Mise en place des listeners
-        this.bReceive.addActionListener(this);
         this.bSend.addActionListener(this);
         this.pseudo.addActionListener(this);
         this.textToSend.addActionListener(this);
         this.setDefaultCloseOperation(this.EXIT_ON_CLOSE);
+        communicaTCPListener.start();
+
 
 
         //Mise en place du format de la fenetre
-        this.setLayout(new GridLayout(4,2));
+        this.setLayout(new GridLayout(3,2));
+
+
         this.textRec.setEditable(false);
         this.textRec.setAutoscrolls(true);
 
@@ -64,12 +67,10 @@ public class Communica extends JFrame implements ActionListener {
         //Insertion des objects graphiques
         this.add(Ipseudo);
         this.add(pseudo);
-        this.add(Imesssend);
+        this.add(scrollTextRec); // C'est plus scrolalble, je ne sais pas pk :/
+        this.add(textRec); // TO DO : L'AFFICHER SUR TOUTE LA LONGUEUR
         this.add(textToSend);
         this.add(bSend);
-        this.add(bReceive);
-        this.add(Imessrec);
-        this.add(scrollTextRec);
 
         //Compile la partie graphique et l'affiche
         this.pack();
@@ -79,26 +80,20 @@ public class Communica extends JFrame implements ActionListener {
     //Envoie le message
     private void sendMessage() {
         System.out.println("Envoi du message");
-        try {
-            String newMessage=this.pseudo.getText() + " : " + this.textToSend.getText();
-            this.writer.write(newMessage);
-            this.writer.newLine();
-            this.writer.flush();
-            this.textToSend.setText(""); //Efface le texte écrit par l'utilisateur
-            this.textRec.append(newMessage + "\n");
-        } catch (IOException e1) {e1.printStackTrace();}
+        String newMessage=this.pseudo.getText() + " : " + this.textToSend.getText();
+        this.communicaTCPSender.sendMessage(newMessage);
+        this.textToSend.setText(""); //Efface le texte écrit par l'utilisateur
+        this.textRec.append(newMessage + "\n");
+    }
+
+    public void printReceivedMessage(String messageToPrint) throws IOException {
+        this.textRec.append(messageToPrint + "\n");
     }
 
     //Action faite si objet cliqué
     public void actionPerformed(ActionEvent e) {
         if (e.getSource() == bSend || e.getSource() == textToSend) { //Envoie message
             this.sendMessage();
-
-        } else if (e.getSource() == bReceive) { //Recoie message
-            System.out.println("Oh, j'ai reçu du text");
-            try {
-                this.textRec.append(this.reader.readLine()+"\n");
-            } catch (IOException e1) {e1.printStackTrace();}
 
         } else if (e.getSource() == pseudo) { //Pseudo rentré
             textToSend.requestFocus();
